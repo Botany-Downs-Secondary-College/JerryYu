@@ -1,10 +1,14 @@
 from tkinter import *
 from tkinter import ttk
 from random import *
-from json import *
+from json import dump, load
+import os
+from time import gmtime, strftime
+
+FILES_FOLDER = "./mathquiz_files/"
+QUIZ_CONFIG = "quiz_config.json"
 
 class windows_screen:
-    
     def __init__(self, parent):
         self.screen1 = Frame(parent)
         self.screen1.grid(row=0, column=0)
@@ -34,10 +38,10 @@ class windows_screen:
         diff_info = Label(diff_bar, text="Choose your difficulty below:", font=("Calibri", "12"))
         diff_info.grid(row=0, column=0, sticky="W")
         self.diff_var = StringVar(diff_bar, "1")
-        self.difficulties = {'Easy': "0", 
-                            'Medium': "1",
-                            'Hard': "2"}
-        for (option, value) in self.difficulties.items():
+        
+        # Insert smart_brain method here that grabs the question configs
+
+        for (option, value) in smart_brain.difficulties_choice.items():
             ttk.Radiobutton(diff_bar, text = option, variable = self.diff_var,
                             value = value).grid(row = int(value) + 1, column = 1, pady = 4, sticky ="W")
 
@@ -54,15 +58,13 @@ class windows_screen:
         self.error_types = {0:"Please enter your name",
                             1:"Please enter your age!",
                             2:"Please enter a number for you age!"}
-        #print(self.diff_var.get()) # displays current difficulty
         if len(self.name_entry.get()) < 1:
             self.errors.append(0)
         if len(self.age_entry.get()) < 1:
             self.errors.append(1)
         elif self.age_entry.get().isdigit() == False:
             self.errors.append(2)
-        print(f"\n[DEBUG]: {len(self.errors)} errors for user on main screen, error codes:") # ----------------------------------- DEBUG LINE --------------------------------
-        print(self.errors)
+        print(f"[DEBUG] [{strftime('%Y-%m-%d %H:%M:%S', gmtime())}] - {len(self.errors)} errors for user on main screen, error codes: {str(self.errors)}")
         if len(self.errors) != 0:
             self.error_label.config(text=(self.error_types[self.errors[0]]))
             self.errors.clear()
@@ -71,16 +73,67 @@ class windows_screen:
 
 
 
-
-
-
-
+class background_tasks:
+    def __init__(self):
+        with open((FILES_FOLDER + QUIZ_CONFIG), "r") as read_config:
+            self.config_data = load(read_config)
+            print(f"[DEBUG] [{strftime('%Y-%m-%d %H:%M:%S', gmtime())}] - length of quiz config: {len(self.config_data)}")
+        # Close file
+        self.difficulties_choice = {}
+        for i in range(len(self.config_data)):
+            self.difficulties_choice.update({(self.config_data[str(i)]["name"]):str(i)})
 
 
 if __name__ == "__main__":
+    # Process below basically checks if the required files are in the directory set above in the program
+    # The program will create the files and directories if they do not exist
+    print(f"[DEBUG] [{strftime('%Y-%m-%d %H:%M:%S', gmtime())}] - locating '{FILES_FOLDER + QUIZ_CONFIG}'")
+    if os.path.isfile(FILES_FOLDER + QUIZ_CONFIG) != True:
+        print(f"[DEBUG] [{strftime('%Y-%m-%d %H:%M:%S', gmtime())}] - cannot find file, changing working directory!")
+        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+        print(f"[DEBUG] [{strftime('%Y-%m-%d %H:%M:%S', gmtime())}] - current working directory changed to current python file location")
+    print(f"[DEBUG] [{strftime('%Y-%m-%d %H:%M:%S', gmtime())}] - current working directory: '{os.getcwd()}'")
+    if os.path.isfile(FILES_FOLDER + QUIZ_CONFIG) == True:
+        print(f"[DEBUG] [{strftime('%Y-%m-%d %H:%M:%S', gmtime())}] - status of '{FILES_FOLDER + QUIZ_CONFIG}': online")
+        pass
+    else:
+        print(f"[DEBUG] [{strftime('%Y-%m-%d %H:%M:%S', gmtime())}] - '{FILES_FOLDER + QUIZ_CONFIG}' is offline, creating file")
+        if os.path.isdir(FILES_FOLDER) != True:
+            print(f"[DEBUG] [{strftime('%Y-%m-%d %H:%M:%S', gmtime())}] - '{FILES_FOLDER}' directory cannot be found, creating directory")
+            os.mkdir(FILES_FOLDER)
+            print(f"[DEBUG] [{strftime('%Y-%m-%d %H:%M:%S', gmtime())}] - created directory: '{FILES_FOLDER}' directory")
+        else:
+            print(f"[DEBUG] [{strftime('%Y-%m-%d %H:%M:%S', gmtime())}] - '{FILES_FOLDER}' folder exists")
+            pass
+        # This is the default config for the mathquiz, I made it so people can change the config themeselves and have their own difficulties for more dynamic use
+        default_math_quiz_config = {
+            "0":{
+                "name": "Easy",
+                "number_range":  ["0", "10"],
+                "operators": ["+", "-"],
+                "question_length": 2
+                },
+            "1":{
+                "name": "Medium",
+                "number_range":  ["0", "15"],
+                "operators": ["+", "-", "*"],
+                "question_length": 3
+                },
+            "2":{
+                "name": "Hard",
+                "number_range":  ["0", "20"],
+                "operators": ["+", "-", "*", "/"],
+                "question_length": 4
+                }
+            }
+        with open((FILES_FOLDER + QUIZ_CONFIG), 'a+') as json_f:
+            dump(default_math_quiz_config, json_f, indent=4)
+            print(f"[DEBUG] [{strftime('%Y-%m-%d %H:%M:%S', gmtime())}] - '{FILES_FOLDER + QUIZ_CONFIG}' file created and is online!")
+    
     root = Tk()
-    frames = windows_screen(root)
+    smart_brain = background_tasks()
+    main_screen = windows_screen(root)
     root.title("MathQuiz")
-    root.geometry('500x500')
+    #root.geometry('500x300')
     root.resizable(False, False)
-    root.mainloop() 
+    root.mainloop()
